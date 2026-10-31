@@ -1,0 +1,137 @@
+/* Real, persistent cards. Scroll moves the entire sheet, never its text alone. */
+.sx .sx-story-shuffle .sx-story-display {
+  isolation: isolate;
+  overflow: visible;
+}
+.sx .sx-story-shuffle .sx-story-card {
+  background: color-mix(
+    in srgb,
+    var(--story-card-accent) 4%,
+    var(--sx-surface)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--story-card-accent) 26%,
+    var(--sx-line)
+  );
+  transform-origin: 50% 75%;
+  transition:
+    background 300ms ease,
+    border-color 300ms ease;
+  backface-visibility: hidden;
+  pointer-events: none;
+  box-shadow:
+    inset 0 1px 0 var(--sx-edge),
+    0 12px 30px rgba(0, 0, 0, 0.16);
+}
+.sx-story-card[data-story-card="0"] {
+  --story-card-accent: var(--sx-accent);
+}
+.sx-story-card[data-story-card="1"] {
+  --story-card-accent: var(--sx-secondary);
+}
+.sx-story-card[data-story-card="2"] {
+  --story-card-accent: var(--sx-sand);
+}
+.sx .sx-story-shuffle .sx-story-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--sx-bg);
+  opacity: var(--story-shade, 0);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.sx .sx-story-shuffle .sx-story-display[data-shuffling="true"] .sx-story-card {
+  will-change: transform;
+}
+.sx .sx-story-shuffle .sx-story-record {
+  animation: none;
+}
+.sx .sx-story-shuffle .sx-story-symbol,
+.sx .sx-story-shuffle .sx-story-sheet-head .sx-mark {
+  color: var(--story-card-accent);
+}
+.sx .sx-story-shuffle .sx-story-sheet-head .sx-mark i,
+.sx .sx-story-shuffle .sx-story-record-line > span:first-child,
+.sx .sx-story-shuffle .sx-story-track .is-done i {
+  background: var(--story-card-accent);
+}
+.sx .sx-story-shuffle .sx-story-caption {
+  margin-top: 30px;
+}
+
+@media (max-width: 700px) {
+  .sx .sx-story-shuffle .sx-story-sticky {
+    position: sticky;
+    top: 16px;
+    z-index: 4;
+    max-width: 440px;
+    padding-block: 8px 20px;
+    background: var(--sx-bg);
+  }
+  .sx .sx-story-shuffle .sx-story-sticky::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: -16px;
+    right: -16px;
+    height: 28px;
+    background: linear-gradient(var(--sx-bg), transparent);
+    pointer-events: none;
+  }
+  .sx .sx-story-shuffle .sx-story-display {
+    height: clamp(260px, 35svh, 306px);
+    margin-top: 18px;
+    max-width: 400px;
+  }
+  .sx .sx-story-shuffle .sx-story-sheet-head {
+    padding: 14px 18px;
+    font-size: 7px;
+  }
+  .sx .sx-story-shuffle .sx-story-record {
+    padding: 18px 20px 42px;
+  }
+  .sx .sx-story-shuffle .sx-story-symbol {
+    margin-bottom: 12px;
+  }
+  .sx .sx-story-shuffle .sx-story-symbol > svg {
+    width: 27px;
+    height: 27px;
+  }
+  .sx .sx-story-shuffle .sx-story-record h3 {
+    font-size: 21px;
+    line-height: 1.2;
+    margin-top: 8px;
+  }
+  .sx .sx-story-shuffle .sx-story-record p {
+    font-size: 9px;
+    line-height: 1.65;
+    margin-top: 8px;
+  }
+  .sx .sx-story-shuffle .sx-story-record-line {
+    margin-top: 12px;
+  }
+  .sx .sx-story-shuffle .sx-story-track {
+    bottom: 15px;
+  }
+  .sx .sx-story-shuffle .sx-story-caption {
+    margin-top: 26px;
+  }
+  .sx .sx-story-shuffle .sx-story-steps {
+    padding-top: 30px;
+  }
+  .sx .sx-story-shuffle .sx-story-steps > article {
+    min-height: max(330px, 50svh);
+    display: flex;
+    align-items: center;
+    padding-block: 48px;
+    scroll-margin-top: 440px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sx .sx-story-shuffle .sx-story-card {
+    transition: none;
+    will-change: auto;
+  }
+}

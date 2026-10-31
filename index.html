@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1D1018" />
+    <meta
+      name="description"
+      content="ServeBase centralizes NGO volunteer profiles, donor records, community drive participation, and CSV reporting. A K.R. Mangalam University Community Service Project."
+    />
+    <style>
+      html,
+      body {
+        background: #1d1018;
+      }
+      html[data-servebase-theme="light"],
+      html[data-servebase-theme="light"] body {
+        background: #f8fafc;
+      }
+      html[data-servebase-area="volunteer"],
+      html[data-servebase-area="volunteer"] body {
+        background: #f6f1e7;
+      }
+      html[data-servebase-area="volunteer"][data-servebase-theme="dark"],
+      html[data-servebase-area="volunteer"][data-servebase-theme="dark"] body {
+        background: #211d1a;
+      }
+    </style>
+    <script>
+      try {
+        var volunteerArea = /^#\/volunteer(?:\/|\?|$)/.test(location.hash);
+        document.documentElement.dataset.servebaseArea = volunteerArea ? "volunteer" : "main";
+        document.documentElement.dataset.servebaseTheme = volunteerArea
+          ? localStorage.getItem("servebase-volunteer-theme") === "dark" ? "dark" : "light"
+          : localStorage.getItem("servebase-theme") === "light" ? "light" : "dark";
+      } catch {
+        document.documentElement.dataset.servebaseTheme =
+          document.documentElement.dataset.servebaseArea === "volunteer" ? "light" : "dark";
+      }
+    </script>
+    <title>ServeBase — NGO Management Infrastructure</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

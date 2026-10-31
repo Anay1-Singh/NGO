@@ -1,0 +1,30 @@
+.sb-profile-avatar { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+.sb-profile-avatar > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.sb-photo-picker {
+  --photo-ink: var(--vp-ink, var(--sb-ink, #203d33));
+  --photo-muted: var(--vp-muted, var(--sb-copy, #65746b));
+  --photo-line: var(--vp-control-line, var(--sb-stroke, #d8d5c7));
+  --photo-surface: var(--vp-surface, var(--sb-surface, #fffdf7));
+  --photo-accent: var(--vp-forest, var(--sb-brand, #174a3d));
+  display: flex; align-items: flex-start; gap: 18px; padding: 20px;
+  border: 1px solid var(--photo-line); border-radius: 12px; color: var(--photo-ink); background: var(--photo-surface);
+}
+.sb-photo-preview { width: 76px; height: 76px; border-radius: 16px; border: 1px solid var(--photo-line); background: var(--vp-selected-bg, var(--sb-raised, #e7ecdf)); font-size: 23px; font-weight: 600; }
+.sb-photo-content { min-width: 0; flex: 1; }
+.sb-photo-picker .sb-photo-label { font: 600 13px/1.5 Inter, system-ui, sans-serif; }
+.sb-photo-label > span { margin-left: 6px; color: var(--photo-muted); font-size: 11px; font-weight: 400; }
+.sb-photo-picker .sb-photo-content p { margin: 5px 0 0; font: 400 12px/1.6 Inter, system-ui, sans-serif; color: var(--photo-muted); }
+.sb-photo-input { display: none; }
+.sb-photo-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sb-photo-picker .sb-photo-actions button { min-height: 36px; padding: 7px 12px; border: 1px solid var(--photo-line); border-radius: 6px; background: transparent; color: var(--photo-ink); font: 600 12px/1.4 Inter, system-ui, sans-serif; cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease; }
+.sb-photo-picker .sb-photo-actions button:hover { border-color: var(--photo-accent); background: color-mix(in srgb, var(--photo-accent) 7%, transparent); }
+.sb-photo-picker .sb-photo-actions button:focus-visible { outline: 2px solid var(--photo-accent); outline-offset: 3px; }
+.sb-photo-picker .sb-photo-actions button:disabled { opacity: .5; cursor: default; }
+.sb-photo-picker .sb-photo-actions .sb-photo-remove { border-color: transparent; color: var(--photo-muted); }
+.sb-photo-picker .sb-photo-content .sb-photo-status:empty { display: none; }
+.sb-photo-picker .sb-photo-content .sb-photo-error { color: var(--vp-error-ink, var(--cx-rose, #9e3f2b)); }
+.vp-passport-initials .vp-passport-portrait { width: 100%; height: 100%; border-radius: inherit; }
+.vp-profile-form .sb-photo-picker { margin-bottom: 24px; }
+.vp-profile-fields > .sb-photo-picker { grid-column: 1 / -1; }
+@media (max-width: 420px) { .sb-photo-picker { padding: 15px; gap: 12px; } .sb-photo-preview { width: 56px; height: 56px; border-radius: 12px; font-size: 19px; } }
+@media (prefers-reduced-motion: reduce) { .sb-photo-picker button { transition: none; } }

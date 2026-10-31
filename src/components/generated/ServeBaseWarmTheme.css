@@ -1,0 +1,82 @@
+/* Garnet and champagne belong to the operations desk. Volunteer colors have
+   their own independent fieldbook tokens and never inherit this palette. */
+.sb-app[data-theme="dark"][data-area="main"],
+.sb-app[data-theme="dark"][data-area="main"] .sb.sb-auth {
+  --sb-page: #1d1018;
+  --sb-surface: #2b1923;
+  --sb-raised: #39232d;
+  --sb-ink: #faede3;
+  --sb-copy: #d6bfc4;
+  --sb-dim: #bfa3ac;
+  --sb-stroke: #5c3a49;
+  --sb-control-stroke: #a17487;
+  --sb-brand: #ffc078;
+  --sb-action: #ffc078;
+  --sb-on-action: #351b18;
+  --sb-field: #24121c;
+  --sb-error: #ffafaa;
+  --sb-sand: #eda0ad;
+  --sb-secondary: #f2a285;
+  --sb-glass-panel: rgba(43, 25, 35, 0.94);
+  --sb-glass-header: rgba(29, 16, 24, 0.94);
+  --sb-glass-edge: rgba(255, 201, 185, 0.09);
+  --sb-glass-shadow: 0 12px 40px rgba(20, 4, 12, 0.24);
+  --sb-inset-shadow: inset 0 2px 7px rgba(20, 4, 12, 0.32);
+  --navy: var(--sb-ink);
+  --text: var(--sb-copy);
+  --line: var(--sb-stroke);
+  --teal: var(--sb-brand);
+}
+html[data-servebase-area="main"][data-servebase-theme="dark"],
+html[data-servebase-area="main"][data-servebase-theme="dark"] body {
+  background: #1d1018;
+}
+.sb-app[data-theme="dark"][data-area="main"] .sb-auth {
+  background: var(--sb-page);
+  color: var(--sb-ink);
+}
+.sb-app[data-theme="dark"][data-area="main"] .sb-auth .sb-auth-story {
+  background: var(--sb-surface);
+}
+.sb-app[data-theme="dark"][data-area="main"] .sb-auth .sb-mark i {
+  background: var(--sb-brand);
+}
+.sb-app[data-theme="dark"][data-area="main"] .sb-auth .sb-brand-period {
+  color: var(--sb-brand);
+}
+.sb-app[data-theme="dark"][data-area="main"] .sb-auth .sb-skip {
+  background: var(--sb-raised);
+  color: var(--sb-ink);
+}
+.sb-app[data-theme="dark"][data-area="main"] .sb-auth .sb-auth-input {
+  border-color: var(--sb-control-stroke);
+}
+.sb-app[data-theme="dark"][data-area="main"] .sb-auth .sb-auth-input:focus-within {
+  border-color: var(--sb-brand);
+}
+.sb-app[data-theme="dark"][data-area="main"] .sb-auth .sb-auth-input.has-error {
+  border-color: var(--sb-error);
+}
+.sb-app[data-theme="dark"][data-area="main"] .sb-auth .sb-auth-input input::placeholder {
+  color: var(--sb-dim);
+  opacity: 1;
+}
+.sb-app[data-theme="dark"][data-area="main"] .sb-auth .sb-auth-submit {
+  background: var(--sb-action);
+  color: var(--sb-on-action);
+}
+.sb-app[data-theme="dark"][data-area="main"] .sb-auth .sb-auth-notice {
+  border-color: var(--sb-control-stroke);
+}
+
+/* Pointer feedback uses the current area's colors without changing its motion. */
+html[data-servebase-area="main"][data-servebase-theme="dark"] .sb-motion-hover[data-theme="dark"] {
+  background: radial-gradient(180px circle at var(--motion-pointer-x) var(--motion-pointer-y), rgba(255, 192, 120, 0.085), transparent 72%);
+}
+html[data-servebase-area="main"][data-servebase-theme="dark"] .sb-motion-hover[data-theme="dark"]::after {
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 209, 182, 0.11) 50%, transparent 65%);
+}
+html[data-servebase-area="main"][data-servebase-theme="dark"] .sb-motion-ripple-clip[data-theme="dark"] .sb-motion-ripple {
+  border-color: rgba(255, 192, 120, 0.34);
+  background: rgba(255, 192, 120, 0.12);
+}

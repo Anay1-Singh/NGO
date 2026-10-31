@@ -1,0 +1,201 @@
+/* Shared motion finishing layer. Moving snapshots never transform the live
+   document, so fixed navigation, native scrolling and focus stay attached. */
+.sb-app :is(#sx-main, #db-main, #vp-main, .sb-auth, .sv-auth) {
+  view-transition-name: servebase-page;
+}
+
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-group(root),
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(servebase-page) {
+  animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-image-pair(servebase-page) {
+  isolation: isolate;
+}
+::view-transition-old(servebase-page),
+::view-transition-new(servebase-page) {
+  mix-blend-mode: normal;
+  backface-visibility: hidden;
+}
+::view-transition-old(servebase-page) {
+  animation: sb-fluid-page-out 130ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+::view-transition-new(servebase-page) {
+  animation: sb-fluid-page-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+html[data-sb-transitioning="true"] .sb-motion-overlay {
+  visibility: hidden;
+}
+@keyframes sb-fluid-page-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes sb-fluid-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Route motion owns the entrance, including its Web Animations fallback.
+   Keep this override after a transition so old CSS entrances cannot restart. */
+.sb-app[data-route-motion="true"] :is(
+  #sx-main,
+  #db-main > div,
+  #vp-main,
+  .vf-page > header,
+  .vf-home-spread,
+  .vf-opportunity-grid,
+  .vf-ledger-layout,
+  .sb-auth-flow > div,
+  .sb-auth-form-wrap,
+  .sv-auth-entry,
+  .sv-auth-story h2
+) {
+  animation: none !important;
+}
+html[data-sb-transitioning="true"] [data-motion-root]
+  [data-motion-reveal-state="waiting"] {
+  opacity: 1;
+  translate: none;
+  scale: 1;
+  transition: none;
+}
+html[data-sb-transitioning="true"] [data-motion-root]
+  [data-motion-reveal="stagger"][data-motion-reveal-state="waiting"] > * {
+  opacity: 1;
+  translate: none;
+  transition: none;
+}
+
+/* One short entrance for dialogs. No animated clipping or expanding layout. */
+.sb-app .sx-index-dialog[open],
+.sb-app .db-modal[open],
+.sb-app .vp .vf-dialog[open],
+.sb-app .sb-dock-settings {
+  animation: sb-fluid-panel-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sb-app .sx-index-layout nav > a {
+  animation-duration: 220ms;
+  animation-delay: 0ms;
+  transition: color 160ms, translate 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes sb-fluid-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.994);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Native top-layer transitions retain persistent dialogs for their exit fade.
+   close()/Escape still release modal focus and input immediately. */
+@supports (transition-behavior: allow-discrete) and (overlay: auto) {
+  .sb-app[data-route-motion] :is(dialog.sx-index-dialog, dialog.db-modal, dialog.vp-dialog, dialog.vf-dialog) {
+    opacity: 0;
+    translate: 0 6px;
+    scale: 0.994;
+    transition:
+      opacity 180ms ease,
+      translate 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      scale 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      display 200ms allow-discrete,
+      overlay 200ms allow-discrete;
+  }
+  .sb-app[data-route-motion] :is(dialog.sx-index-dialog, dialog.db-modal, dialog.vp-dialog, dialog.vf-dialog)[open] {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+    animation: none;
+  }
+  .sb-app[data-route-motion] :is(dialog.sx-index-dialog, dialog.db-modal, dialog.vp-dialog, dialog.vf-dialog):not([open]),
+  .sb-app[data-route-motion] :is(dialog.sx-index-dialog, dialog.db-modal, dialog.vp-dialog, dialog.vf-dialog):not([open])::backdrop {
+    pointer-events: none;
+  }
+  .sb-app[data-route-motion] :is(dialog.sx-index-dialog, dialog.db-modal, dialog.vp-dialog, dialog.vf-dialog)::backdrop {
+    opacity: 0;
+    transition: opacity 180ms ease, display 200ms allow-discrete, overlay 200ms allow-discrete;
+  }
+  .sb-app[data-route-motion] :is(dialog.sx-index-dialog, dialog.db-modal, dialog.vp-dialog, dialog.vf-dialog)[open]::backdrop {
+    opacity: 1;
+  }
+  @starting-style {
+    .sb-app[data-route-motion] :is(dialog.sx-index-dialog, dialog.db-modal, dialog.vp-dialog, dialog.vf-dialog)[open] {
+      opacity: 0;
+      translate: 0 6px;
+      scale: 0.994;
+    }
+    .sb-app[data-route-motion] :is(dialog.sx-index-dialog, dialog.db-modal, dialog.vp-dialog, dialog.vf-dialog)[open]::backdrop {
+      opacity: 0;
+    }
+  }
+  html[data-sb-transitioning="true"] .sb-app[data-route-motion] dialog:not([open]),
+  html[data-sb-transitioning="true"] .sb-app[data-route-motion] dialog:not([open])::backdrop {
+    transition: none;
+  }
+}
+
+/* Grow a composited line instead of changing its right edge every frame. */
+.sb-app .db-metric-card::before {
+  right: 18px;
+  transform: scaleX(0.3);
+  transform-origin: left center;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sb-app .db-metric-card:hover::before {
+  right: 18px;
+  transform: scaleX(1);
+}
+
+/* Precise press feedback overrides older component timing, while preserving
+   each control's shape treatment and existing hover transform. */
+.sb-app .sb-motion-target[data-motion-control="button"] {
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sb-app .sb-motion-target[data-motion-control="button"]:not(:disabled):not(
+  [aria-disabled="true"]
+):active,
+.sb-app .sb-motion-target[data-motion-control="button"][data-motion-pressed="true"] {
+  transition-duration: 65ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  .sb-app .sx-index-dialog[open],
+  .sb-app .db-modal[open],
+  .sb-app .vp .vf-dialog[open],
+  .sb-app .sb-dock-settings,
+  .sb-app .sx-index-layout nav > a,
+  .sb-app .db-metric-card::before,
+  .sb-app .sb-motion-target[data-motion-control="button"] {
+    animation: none !important;
+    transition: none !important;
+  }
+  .sb-app[data-route-motion] dialog,
+  .sb-app[data-route-motion] dialog::backdrop {
+    transition: none !important;
+    translate: none;
+    scale: none;
+  }
+}

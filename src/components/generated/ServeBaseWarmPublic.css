@@ -1,0 +1,157 @@
+/* Garnet, rose and champagne belong to the institutional public site only. */
+.sb-app[data-theme="dark"][data-area="main"] .sx {
+  --sx-bg: #1d1018;
+  --sx-ink: #faede3;
+  --sx-copy: #d6bfc4;
+  --sx-muted: #bfa3ac;
+  --sx-line: #5c3a49;
+  --sx-accent: #ffc078;
+  --sx-secondary: #eda0ad;
+  --sx-sand: #f2a285;
+  --sx-surface: #2b1923;
+  --sx-raised: #39232d;
+  --sx-glass: rgba(43, 25, 35, 0.9);
+  --sx-paper: #f3c797;
+  --sx-paper-ink: #351b18;
+  --sx-grid: rgba(237, 160, 173, 0.065);
+  --sx-edge: rgba(255, 221, 193, 0.09);
+  color-scheme: dark;
+  accent-color: var(--sx-accent);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx ::selection {
+  background: #805064;
+  color: #fff5e8;
+}
+
+/* The warm paper details retain dark ink, including the contributor identity. */
+.sb-app[data-theme="dark"][data-area="main"] .sx-person-record-top,
+.sb-app[data-theme="dark"][data-area="main"] .sx-person-monogram {
+  border-color: #be936e;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx-person-record .sx-mark i {
+  background: #794336;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx-person-monogram > span {
+  color: #794336;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx-person-monogram > i {
+  border-color: rgba(121, 67, 54, 0.22);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx-person-id > span,
+.sb-app[data-theme="dark"][data-area="main"] .sx-person-record > p {
+  color: #704334;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx-index-dialog::backdrop {
+  background: rgba(29, 12, 23, 0.76);
+}
+
+/* Dock item colors are inline in the shared dock; these replace its cool hues. */
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-dock {
+  --dock-accent: #ffc078;
+  --dock-violet: #eda0ad;
+  --dock-peach: #f2a285;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-dock-item:nth-child(1) {
+  --dock-item-color: #ffc078 !important;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-dock-item:nth-child(2) {
+  --dock-item-color: #eda0ad !important;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-dock-item:nth-child(3) {
+  --dock-item-color: #f2a285 !important;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-dock-item:nth-child(4) {
+  --dock-item-color: #deb1bd !important;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-dock-item:nth-child(5) {
+  --dock-item-color: #eacda6 !important;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-dock-drop-zone {
+  color: var(--sx-accent);
+  background: rgba(255, 192, 120, 0.045);
+  border-color: rgba(255, 192, 120, 0.45);
+}
+
+/* Preview widgets also carry older theme rules; keep their entire canvas warm. */
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-workspace {
+  background: var(--sx-bg);
+  color: var(--sx-ink);
+  border-color: var(--sx-line);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx :is(
+  .sb-window-bar,
+  .sb-preview-table-head,
+  .sb-preview-stats > div,
+  .sb-demo-export .sb-icon-box
+) {
+  background: var(--sx-surface);
+  border-color: var(--sx-line);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-demo-title .sb-sample {
+  background: var(--sx-raised);
+  color: var(--sx-accent);
+  border-color: var(--sx-line);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx :is(
+  .sb-demo-body .sb-tiny-label,
+  .sb-preview-person small,
+  .sb-preview-table-head,
+  .sb-preview-stats span,
+  .sb-demo-record-footer,
+  .sb-demo-hint,
+  .sb-demo-export-intro p,
+  .sb-export-label,
+  .sb-export-summary,
+  .sb-download-message,
+  .sb-demo-empty
+) {
+  color: var(--sx-muted);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-preview-person .sb-avatar {
+  background: var(--sx-raised);
+  color: var(--sx-accent);
+  border-color: var(--sx-line);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-demo-search {
+  color: var(--sx-muted);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-demo-search:focus-within {
+  border-color: var(--sx-accent);
+  outline-color: color-mix(in srgb, var(--sx-accent) 18%, transparent);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-demo-export select {
+  background: var(--sx-bg);
+  color: var(--sx-ink);
+  border-color: var(--sx-line);
+}
+
+/* Export controls use the same dark ink as the other champagne buttons. */
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-demo-download {
+  color: var(--sx-paper-ink) !important;
+  background: var(--sx-paper);
+  border-color: var(--sx-paper);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .sx .sb-demo-download:hover {
+  background: #ffdab0;
+  border-color: #ffdab0;
+}

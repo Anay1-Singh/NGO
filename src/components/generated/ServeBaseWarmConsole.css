@@ -1,0 +1,182 @@
+/* Garnet console. This layer is deliberately limited to the main site's dark
+   workspace; the volunteer fieldbook and the light console retain their themes. */
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console {
+  --sb-page: #1d1018;
+  --sb-surface: #2b1923;
+  --sb-raised: #39232d;
+  --sb-field: #24141e;
+  --sb-ink: #faede3;
+  --sb-copy: #d6bfc4;
+  --sb-dim: #bfa3ac;
+  --sb-stroke: #5c3a49;
+  --sb-brand: #ffc078;
+  --sb-action: #ffc078;
+  --sb-on-action: #351b18;
+  --sb-sand: #f2a285;
+  --sb-secondary: #eda0ad;
+  --sb-error: #ffabb1;
+  --sb-glass-panel: rgba(43, 25, 35, 0.94);
+  --sb-glass-header: rgba(38, 21, 31, 0.96);
+  --sb-glass-edge: rgba(255, 217, 192, 0.09);
+  --sb-glass-shadow: 0 12px 40px rgba(28, 8, 20, 0.24);
+  --sb-inset-shadow: inset 0 2px 7px rgba(25, 7, 17, 0.3);
+  --cx-mint: #c2c991;
+  --cx-amber: #ffc078;
+  --cx-violet: #eda0ad;
+  --cx-blue: #f2a285;
+  --warm-console-control: #946b7d;
+  color-scheme: dark;
+  background-color: var(--sb-page);
+  scrollbar-color: #946b7d var(--sb-page);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console .db-sidebar {
+  background: rgba(43, 25, 35, 0.96);
+  border-color: #664151;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console .db-topbar {
+  background: var(--sb-glass-header);
+  border-color: var(--sb-stroke);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console .db-sidebar nav a.is-active {
+  background: #4b2d32;
+  border-color: #9c6a51;
+  color: var(--sb-brand);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console .db-sidebar nav a:hover {
+  background: var(--sb-raised);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(.db-org-symbol, .db-top-avatar) {
+  background: #503036;
+  border-color: #805345;
+  color: var(--sb-brand);
+}
+
+/* Controls have a clearer boundary than decorative cards. */
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(
+  .db-field input,
+  .db-field select,
+  .db-field textarea,
+  .db-global-search,
+  .people-search,
+  .people-filter,
+  .people-date-filters input,
+  .drives-search,
+  .drives-toolbar > select,
+  .cx-period,
+  .cx-table-search,
+  .cx-columns summary
+) {
+  border-color: var(--warm-console-control);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(
+  .db-field input,
+  .db-field select,
+  .db-field textarea
+):focus,
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(
+  .db-global-search,
+  .people-search,
+  .drives-search,
+  .cx-table-search
+):focus-within {
+  border-color: var(--sb-brand);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(
+  .db-field input,
+  .db-field select,
+  .db-field textarea
+)[aria-invalid="true"] {
+  border-color: var(--sb-error);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(input, select, textarea) {
+  accent-color: var(--sb-action);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console input[type="checkbox"] {
+  accent-color: #ffc078;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(.db-button.primary, .cx-create-trigger) {
+  background: var(--sb-action);
+  color: var(--sb-on-action);
+  border-color: var(--sb-action);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(.db-button.primary, .cx-create-trigger):hover:not(:disabled) {
+  background: #ffcf98;
+  border-color: #ffcf98;
+  color: var(--sb-on-action);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console .drives-status--upcoming,
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console .drives-status--registered {
+  color: var(--cx-violet);
+  border-color: color-mix(in srgb, var(--cx-violet) 40%, var(--sb-stroke));
+  background: color-mix(in srgb, var(--cx-violet) 8%, var(--sb-surface));
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(
+  .drives-status--ongoing,
+  .drives-status--attended,
+  .db-status.positive,
+  .db-success-notice
+) {
+  color: var(--cx-mint);
+  border-color: color-mix(in srgb, var(--cx-mint) 35%, var(--sb-stroke));
+  background: color-mix(in srgb, var(--cx-mint) 6%, var(--sb-surface));
+}
+
+/* The people module marks these three declarations important in its base CSS. */
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console .people-status-positive {
+  color: var(--cx-mint) !important;
+  border-color: color-mix(in srgb, var(--cx-mint) 35%, var(--sb-stroke)) !important;
+  background: color-mix(in srgb, var(--cx-mint) 6%, var(--sb-surface)) !important;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console .people-status-positive::before {
+  background: var(--cx-mint);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console .cx-bar {
+  background: #a36f7d;
+  border-color: #c18a95;
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console .cx-chart-columns .is-selected .cx-bar {
+  background: var(--sb-brand);
+  border-color: var(--sb-brand);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console .cx-chart-columns button:is(:hover, :focus-visible) .cx-bar {
+  background: var(--cx-blue);
+  border-color: var(--cx-blue);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(.db-modal, .people-modal, .cx-guide-dialog) {
+  background: var(--sb-surface);
+  color: var(--sb-ink);
+  border-color: var(--sb-stroke);
+  box-shadow: inset 0 1px 0 var(--sb-glass-edge), 0 26px 100px rgba(24, 7, 17, 0.56);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(.db-modal, .people-modal, .cx-guide-dialog)::backdrop {
+  background: rgba(24, 8, 18, 0.76);
+}
+
+.sb-app[data-theme="dark"][data-area="main"] .db.db-console :is(.db-search-results, .cx-create-options, .cx-columns > div) {
+  box-shadow: inset 0 1px 0 var(--sb-glass-edge), 0 16px 45px rgba(24, 7, 17, 0.4);
+}
+
+@media (max-width: 780px) {
+  .sb-app[data-theme="dark"][data-area="main"] .db.db-console .db-nav-overlay {
+    background: rgba(24, 8, 18, 0.76);
+  }
+}
