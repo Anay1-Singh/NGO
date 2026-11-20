@@ -19,6 +19,7 @@ type SignupForm = {
   name: string;
   email: string;
   phone: string;
+  volunteerCode: string;
   skills: string;
   availability: Availability;
   password: string;
@@ -34,7 +35,7 @@ export function VolunteerSignupPage({
   theme: VolunteerTheme;
   toggleTheme: () => void;
 }) {
-  const [form, setForm] = useState<SignupForm>({ name: "", email: "", phone: "", skills: "", availability: "Flexible", password: "", confirmPassword: "" });
+  const [form, setForm] = useState<SignupForm>({ name: "", email: "", phone: "", volunteerCode: "", skills: "", availability: "Flexible", password: "", confirmPassword: "" });
   const [photo, setPhoto] = useState("");
   const [photoBusy, setPhotoBusy] = useState(false);
   const [accepted, setAccepted] = useState(false);
@@ -98,8 +99,8 @@ export function VolunteerSignupPage({
     setSubmitting(true);
     const uniqueSkills = [...new Map(skills.map((skill) => [skill.toLowerCase(), skill])).values()];
     try {
-      await registerVolunteer({ name, email, password: form.password, phone, skills: uniqueSkills, availability: form.availability, termsVersion });
-      setForm({ name: "", email: "", phone: "", skills: "", availability: "Flexible", password: "", confirmPassword: "" });
+      await registerVolunteer({ name, email, password: form.password, phone, volunteerCode: form.volunteerCode.trim(), skills: uniqueSkills, availability: form.availability, termsVersion });
+      setForm({ name: "", email: "", phone: "", volunteerCode: "", skills: "", availability: "Flexible", password: "", confirmPassword: "" });
       setPhoto("");
       setAccepted(false);
       setErrors({});
@@ -171,6 +172,9 @@ export function VolunteerSignupPage({
               <label className="sv-signup-field" htmlFor="sv-signup-phone">Phone number <span className="sv-signup-optional">Optional</span>
                 <input id="sv-signup-phone" name="tel" type="tel" autoComplete="tel" maxLength={60} value={form.phone} onChange={(event) => setField("phone", event.target.value)} placeholder="+91 98765 43210" aria-invalid={Boolean(errors.phone)} aria-describedby={errors.phone ? "sv-signup-phone-error" : undefined} />
                 {errors.phone && <small id="sv-signup-phone-error" className="sv-signup-field-error">{errors.phone}</small>}
+              </label>
+              <label className="sv-signup-field" htmlFor="sv-signup-code">Volunteer Code <span className="sv-signup-optional">Optional</span>
+                <input id="sv-signup-code" name="volunteerCode" maxLength={40} value={form.volunteerCode} onChange={(event) => setField("volunteerCode", event.target.value)} placeholder="e.g. VC-001" />
               </label>
             </div>
           </fieldset>

@@ -186,6 +186,7 @@ function toLocalVolunteer(profile: VolunteerProfile): Volunteer {
     name: profile.name,
     email: profile.email,
     phone: profile.phone ?? "",
+    volunteerCode: profile.volunteerCode ?? "",
     skills: profile.skills,
     availability: profile.availability,
     status: profile.status === "Active" ? "Active" : "Inactive",
@@ -434,6 +435,7 @@ type ProfileForm = {
   name: string;
   email: string;
   phone: string;
+  volunteerCode: string;
   skills: string;
   availability: Volunteer["availability"];
 };
@@ -442,6 +444,7 @@ const asForm = (v: Volunteer): ProfileForm => ({
   name: v.name,
   email: v.email,
   phone: v.phone,
+  volunteerCode: v.volunteerCode ?? "",
   skills: v.skills.join(", "),
   availability: v.availability,
 });
@@ -541,6 +544,7 @@ function VolunteerProfile({ volunteerId }: { volunteerId: string }) {
                 name: form.name.trim(),
                 email: form.email.trim(),
                 phone: form.phone.trim(),
+                volunteerCode: form.volunteerCode.trim(),
                 skills: uniqueSkills,
                 availability: form.availability,
               }
@@ -560,8 +564,19 @@ function VolunteerProfile({ volunteerId }: { volunteerId: string }) {
         name: form.name.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
+        volunteerCode: form.volunteerCode.trim(),
         skills: uniqueSkills.join(", "),
       });
+      if (firebaseConfigStatus.configured) {
+        void volunteerRepository.update(volunteerId, {
+          name: form.name.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          volunteerCode: form.volunteerCode.trim(),
+          skills: uniqueSkills,
+          availability: form.availability,
+        });
+      }
       setNotice(
         "Your details are saved. Your coordinator’s directory now uses this information.",
       );
@@ -609,6 +624,12 @@ function VolunteerProfile({ volunteerId }: { volunteerId: string }) {
               <dt>Profile reference</dt>
               <dd>{volunteer.id.toUpperCase()}</dd>
             </div>
+            {volunteer.volunteerCode && (
+              <div>
+                <dt>Volunteer Code</dt>
+                <dd>{volunteer.volunteerCode}</dd>
+              </div>
+            )}
             <div>
               <dt>Directory status</dt>
               <dd>
@@ -696,6 +717,17 @@ function VolunteerProfile({ volunteerId }: { volunteerId: string }) {
                 {errors.phone && (
                   <small id="vp-phone-error">{errors.phone}</small>
                 )}
+              </label>
+              <label htmlFor="vp-profile-code">
+                Volunteer Code <span>(optional)</span>
+                <input
+                  id="vp-profile-code"
+                  aria-label="Volunteer Code"
+                  maxLength={40}
+                  value={form.volunteerCode}
+                  onChange={(e) => setField("volunteerCode", e.target.value)}
+                  placeholder="e.g. VC-001"
+                />
               </label>
             </div>
           </section>

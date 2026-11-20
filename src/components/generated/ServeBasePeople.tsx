@@ -261,6 +261,7 @@ const initialForm = (section: Section, item?: RecordItem): FormValues => {
       name: v?.name ?? "",
       email: v?.email ?? "",
       phone: v?.phone ?? "",
+      volunteerCode: v?.volunteerCode ?? "",
       skills: v?.skills.join(", ") ?? "",
       availability: v?.availability ?? "Flexible",
       status: v?.status ?? "Active",
@@ -369,6 +370,7 @@ export function PeoplePage({
                   name: ri.name || "Volunteer",
                   email: ri.email || "",
                   phone: ri.phone || "",
+                  volunteerCode: ri.volunteerCode || "",
                   skills: Array.isArray(ri.skills) ? ri.skills : [],
                   availability: ri.availability || "Flexible",
                   status: ri.status === "Active" ? "Active" : "Inactive",
@@ -698,6 +700,7 @@ export function PeoplePage({
         name: f.name,
         email: f.email.toLowerCase(),
         phone: f.phone,
+        volunteerCode: f.volunteerCode,
         skills: [...uniqueSkills.values()],
         availability: f.availability as Volunteer["availability"],
         status: f.status as Volunteer["status"],
@@ -722,6 +725,7 @@ export function PeoplePage({
             name: f.name,
             email: f.email.toLowerCase(),
             phone: f.phone,
+            volunteerCode: f.volunteerCode,
             skills: [...uniqueSkills.values()],
             availability: f.availability as Volunteer["availability"],
             status: f.status as Volunteer["status"],
@@ -1618,6 +1622,15 @@ export function PeoplePage({
                       required
                       placeholder="+91 98765 43210"
                     />
+                    {section === "volunteers" && (
+                      <FormField
+                        label="Volunteer Code"
+                        name="volunteerCode"
+                        value={form.volunteerCode}
+                        onChange={change}
+                        placeholder="e.g. VC-001"
+                      />
+                    )}
                     <FormField
                       label="Joined on"
                       name="joinedOn"
@@ -1849,6 +1862,9 @@ export function PeoplePage({
                       <dl className="db-detail-grid people-detail-grid">
                         <DetailItem label="Email">{v.email}</DetailItem>
                         <DetailItem label="Phone">{v.phone}</DetailItem>
+                        <DetailItem label="Volunteer Code">
+                          {v.volunteerCode || "Not specified"}
+                        </DetailItem>
                         <DetailItem label="Joined on">
                           {formatDate(v.joinedOn)}
                         </DetailItem>

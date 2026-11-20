@@ -13,6 +13,7 @@ export interface Volunteer {
   name: string;
   email: string;
   phone: string;
+  volunteerCode?: string;
   skills: string[];
   availability: "Weekdays" | "Weekends" | "Flexible";
   status: "Active" | "Inactive";
@@ -883,6 +884,7 @@ export function validateWorkspace(
           "name",
           "email",
           "phone",
+          "volunteerCode",
           "skills",
           "availability",
           "status",
@@ -895,6 +897,7 @@ export function validateWorkspace(
       string(v.name, "Volunteer name");
       string(v.email, "Volunteer email", 254, true);
       string(v.phone, "Volunteer phone", 60, true);
+      string(v.volunteerCode, "Volunteer code", 40, true);
       if (!Array.isArray(v.skills) || v.skills.length > 30)
         fail("Volunteer skills must be a list of at most 30 entries.");
       v.skills.forEach((skill) => string(skill, "Volunteer skill", 100));

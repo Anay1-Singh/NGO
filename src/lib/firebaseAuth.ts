@@ -44,6 +44,7 @@ export type VolunteerRegistrationInput = {
   email: string;
   password: string;
   phone?: string;
+  volunteerCode?: string;
   skills: string[];
   availability: "Weekdays" | "Weekends" | "Flexible";
   termsVersion: string;
@@ -123,6 +124,7 @@ async function writeVolunteerProfileDocuments(input: RegistrationDraft, uid: str
     name: input.name.trim(),
     email,
     phone: input.phone?.trim() || "",
+    volunteerCode: input.volunteerCode?.trim() || "",
     skills: input.skills,
     availability: input.availability,
     status: "Inactive",
