@@ -884,7 +884,6 @@ export function validateWorkspace(
           "name",
           "email",
           "phone",
-          "volunteerCode",
           "skills",
           "availability",
           "status",
@@ -892,12 +891,14 @@ export function validateWorkspace(
           "notes",
         ],
         `Volunteer ${index + 1}`,
-        ["photo", "termsAcceptedAt", "termsVersion"],
+        ["photo", "termsAcceptedAt", "termsVersion", "volunteerCode"],
       );
       string(v.name, "Volunteer name");
       string(v.email, "Volunteer email", 254, true);
       string(v.phone, "Volunteer phone", 60, true);
-      string(v.volunteerCode, "Volunteer code", 40, true);
+      if (v.volunteerCode !== undefined && v.volunteerCode !== "") {
+        string(v.volunteerCode, "Volunteer code", 40, true);
+      }
       if (!Array.isArray(v.skills) || v.skills.length > 30)
         fail("Volunteer skills must be a list of at most 30 entries.");
       v.skills.forEach((skill) => string(skill, "Volunteer skill", 100));
