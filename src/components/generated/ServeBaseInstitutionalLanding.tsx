@@ -13,6 +13,9 @@ import { MotionSurface } from "./ServeBaseMotion";
 import "./ServeBaseVolunteer.css";
 import { useVolunteerTheme } from "./ServeBaseVolunteerTheme";
 import { navigateServeBase, useServeBaseRoute } from "./ServeBaseNavigation";
+import { firebaseConfigStatus } from "../../lib/firebase";
+import { getMember, signOutCurrentUser, subscribeToAuth } from "../../lib/firebaseAuth";
+import type { User } from "firebase/auth";
 import "./ServeBaseWarmTheme.css";
 import "./ServeBaseWarmPublic.css";
 import "./ServeBaseWarmConsole.css";
@@ -23,14 +26,16 @@ const VolunteerExperience = lazy(() =>
   loadVolunteer().then((module) => ({ default: module.VolunteerExperience })),
 );
 
-const demoSessionKey = "servebase-demo-session";
 export const ServeBaseInstitutionalLanding = () => {
   const { theme, toggleTheme } = useServeBaseTheme();
   const { volunteerTheme, toggleVolunteerTheme } = useVolunteerTheme();
   const route = useServeBaseRoute();
-  const [demoSession, setDemoSession] = useState(() => {
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [member, setMember] = useState<Awaited<ReturnType<typeof getMember>>>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [demoAdmin, setDemoAdmin] = useState(() => {
     try {
-      return sessionStorage.getItem(demoSessionKey) === "active";
+      return sessionStorage.getItem("servebase-demo-admin") === "true";
     } catch {
       return false;
     }
@@ -41,6 +46,32 @@ export const ServeBaseInstitutionalLanding = () => {
   const auth =
     cleanRoute === "/admin/login" || cleanRoute === "/admin/reset-password";
   const dashboard = cleanRoute.startsWith("/admin/") && !auth;
+  const adminSession = Boolean(
+    (authUser &&
+      member?.status === "active" &&
+      (member.role === "admin" || member.role === "coordinator")) ||
+      (!firebaseConfigStatus.configured && demoAdmin) ||
+      demoAdmin,
+  );
+  useEffect(() => {
+    if (!firebaseConfigStatus.configured) {
+      setAuthLoading(false);
+      return;
+    }
+    return subscribeToAuth(async (user) => {
+      setAuthUser(user);
+      if (!user) {
+        setMember(null);
+        setAuthLoading(false);
+        return;
+      }
+      try {
+        setMember(await getMember(user.uid));
+      } finally {
+        setAuthLoading(false);
+      }
+    });
+  }, []);
   useEffect(() => {
     // Warm the small volunteer chunk after first paint and on navigation intent.
     let warmed = false;
@@ -66,8 +97,8 @@ export const ServeBaseInstitutionalLanding = () => {
     };
   }, []);
   useLayoutEffect(() => {
-    if (dashboard && !demoSession) window.location.hash = "/admin/login";
-  }, [dashboard, demoSession]);
+    if (dashboard && !authLoading && !adminSession) window.location.hash = "/admin/login";
+  }, [dashboard, authLoading, adminSession]);
   useEffect(() => {
     const surface = volunteerArea ? volunteerTheme : theme;
     const volunteerBackground =
@@ -92,18 +123,27 @@ export const ServeBaseInstitutionalLanding = () => {
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [auth, dashboard, route.split("?")[0]]);
-  function enterDemo() {
+  function enterAuthenticatedWorkspace() {
     try {
-      sessionStorage.setItem(demoSessionKey, "active");
-    } catch {}
-    setDemoSession(true);
+      sessionStorage.setItem("servebase-demo-admin", "true");
+    } catch {
+      /* best effort */
+    }
+    setDemoAdmin(true);
     window.location.hash = "/admin/overview";
   }
-  function exitDemo() {
+  async function exitAuthenticatedWorkspace() {
     try {
-      sessionStorage.removeItem(demoSessionKey);
-    } catch {}
-    navigateServeBase("/admin/login", () => setDemoSession(false));
+      sessionStorage.removeItem("servebase-demo-admin");
+    } catch {
+      /* best effort */
+    }
+    setDemoAdmin(false);
+    if (firebaseConfigStatus.configured) await signOutCurrentUser();
+    navigateServeBase("/admin/login", () => {
+      setAuthUser(null);
+      setMember(null);
+    });
   }
   return (
     <WorkspaceProvider>
@@ -128,12 +168,14 @@ export const ServeBaseInstitutionalLanding = () => {
                 toggleTheme={toggleVolunteerTheme}
               />
             </Suspense>
-          ) : dashboard && demoSession ? (
+          ) : dashboard && authLoading ? (
+            <div className="sb-app-loading" role="status">Checking your organization access…</div>
+          ) : dashboard && adminSession ? (
             <AdminDashboard
               route={route}
               theme={theme}
               toggleTheme={toggleTheme}
-              onLogout={exitDemo}
+              onLogout={exitAuthenticatedWorkspace}
             />
           ) : auth || dashboard ? (
             <AdminAuthPage
@@ -141,7 +183,7 @@ export const ServeBaseInstitutionalLanding = () => {
               theme={theme}
               toggleTheme={toggleTheme}
               recovery={cleanRoute === "/admin/reset-password"}
-              onDemoLogin={enterDemo}
+              onAuthenticated={enterAuthenticatedWorkspace}
             />
           ) : (
             <ServeBasePublic

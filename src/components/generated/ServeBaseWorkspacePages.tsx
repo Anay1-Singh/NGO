@@ -1020,7 +1020,7 @@ function ProjectScope() {
         <h2>Volunteer and donor management project</h2>
         <p>Second Year Community Service Evaluation · ServeBase v1.0</p>
         <div>
-          {["Jyoti Sharma", "Shriyashi", "Himanchal", "Anay", "Sarthak"].map(
+          {["Jyoti Sharma", "Shriyashi Kathait", "Himanchal Raghuvanshi", "Anay Singh", "Sarthak Sharma"].map(
             (name) => (
               <span key={name}>{name}</span>
             ),

@@ -241,16 +241,16 @@ export const modules: FeatureContent[] = [
 
 export const members = [
   { name: "Jyoti Sharma", initials: "JS", roll: "2501420052" },
-  { name: "Shriyashi", initials: "SH", roll: "2501420023" },
-  { name: "Himanchal", initials: "HI", roll: "2501420001" },
-  { name: "Anay", initials: "AN", roll: "2501420012" },
-  { name: "Sarthak", initials: "SA", roll: "2501420015" },
+  { name: "Shriyashi Kathait", initials: "SK", roll: "2501420023" },
+  { name: "Himanchal Raghuvanshi", initials: "HR", roll: "2501420001" },
+  { name: "Anay Singh", initials: "AS", roll: "2501420012" },
+  { name: "Sarthak Sharma", initials: "SS", roll: "2501420015" },
 ];
 
 export const projectFacts = {
   university: "K.R. Mangalam University",
   credits: "Second Year Community Service Evaluation",
-  teamline: "Jyoti Sharma · Shriyashi · Himanchal · Anay · Sarthak",
+  teamline: "Jyoti Sharma · Shriyashi · Himanchal Raghuvanshi · Anay · Sarthak",
   notice: "Destination Success · Academic Software Prototype",
   storage: "This demo stores its workspace in the current browser.",
 };

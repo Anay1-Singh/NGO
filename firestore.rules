@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function org(orgId) { return get(/databases/$(database)/documents/organizations/$(orgId)); }
+    function member(orgId) { return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)); }
+    function memberAfter(orgId) { return getAfter(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)); }
+    function signedIn() { return request.auth != null; }
+    function orgActive(orgId) { return org(orgId).data.status == 'active'; }
+    function activeMember(orgId) { return signedIn() && orgActive(orgId) && member(orgId).data.status == 'active'; }
+    function role(orgId, expected) { return activeMember(orgId) && member(orgId).data.role == expected; }
+    function admin(orgId) { return role(orgId, 'admin'); }
+    function coordinatorOrAdmin(orgId) { return admin(orgId) || role(orgId, 'coordinator'); }
+    function ownVolunteer(orgId, volunteerId) { return activeMember(orgId) && member(orgId).data.role == 'volunteer' && member(orgId).data.volunteerId == volunteerId; }
+    function validPublicDrive(data) {
+      return data.publicRegistrationOpen == false || (data.publicRegistrationOpen == true && data.publicationStatus == 'published' && (data.operationalStatus == 'upcoming' || data.operationalStatus == 'ongoing'));
+    }
+    function publicDriveKeys(data) {
+      return data.keys().hasOnly(['driveId', 'name', 'date', 'startAt', 'timezone', 'location', 'description', 'operationalStatus', 'publicationStatus', 'sdg', 'capacity', 'publicRegistrationOpen', 'updatedAt']);
+    }
+    function driveCounterAfter(orgId, driveId, delta) {
+      return getAfter(/databases/$(database)/documents/organizations/$(orgId)/drives/$(driveId)).data.registeredCount == get(/databases/$(database)/documents/organizations/$(orgId)/drives/$(driveId)).data.registeredCount + delta;
+    }
+
+    match /organizations/{organizationId} {
+      allow read: if coordinatorOrAdmin(organizationId);
+      allow update: if admin(organizationId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'slug', 'adminName', 'adminEmail', 'phone', 'address', 'updatedAt']);
+      allow create: if false;
+      allow delete: if false;
+
+      match /publicProfile/{profileId} {
+        allow read: if resource.data.status == 'published';
+        allow write: if admin(organizationId) && request.resource.data.keys().hasOnly(['profileId', 'displayName', 'publicDescription', 'publicContactEmail', 'publicWebsite', 'publicPhone', 'publicAddress', 'status', 'updatedAt']);
+      }
+
+      match /driveDirectory/{driveId} {
+        allow read: if resource.data.publicationStatus == 'published' && resource.data.publicRegistrationOpen == true && (resource.data.operationalStatus == 'upcoming' || resource.data.operationalStatus == 'ongoing');
+        allow create, update: if coordinatorOrAdmin(organizationId) && request.resource.data.driveId == driveId && publicDriveKeys(request.resource.data) && validPublicDrive(request.resource.data);
+        allow delete: if admin(organizationId);
+      }
+
+      match /members/{uid} {
+        allow read: if signedIn() && (request.auth.uid == uid || admin(organizationId) || role(organizationId, 'coordinator'));
+        allow create: if signedIn() && request.auth.uid == uid && orgActive(organizationId) && request.resource.data.uid == uid && request.resource.data.role == 'volunteer' && request.resource.data.status == 'pending' && request.resource.data.volunteerId is string;
+        allow update: if admin(organizationId) && request.resource.data.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'volunteerId', 'photoPath', 'lastLoginAt', 'updatedAt'])
+          || (signedIn() && request.auth.uid == uid && resource.data.role == 'volunteer' && resource.data.status == 'pending' && request.resource.data.uid == uid && request.resource.data.role == 'volunteer' && request.resource.data.status == 'pending' && request.resource.data.volunteerId == resource.data.volunteerId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email', 'displayName', 'providerIds', 'updatedAt']));
+        allow delete: if admin(organizationId);
+      }
+
+      match /volunteers/{volunteerId} {
+        allow read: if coordinatorOrAdmin(organizationId) || ownVolunteer(organizationId, volunteerId);
+        allow create: if signedIn() && request.auth.uid == request.resource.data.authUid && getAfter(/databases/$(database)/documents/organizations/$(organizationId)/members/$(request.auth.uid)).data.volunteerId == volunteerId && getAfter(/databases/$(database)/documents/organizations/$(organizationId)/members/$(request.auth.uid)).data.status == 'pending';
+        allow update: if coordinatorOrAdmin(organizationId) || (ownVolunteer(organizationId, volunteerId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'skills', 'availability', 'updatedAt']));
+        allow delete: if admin(organizationId);
+      }
+
+      match /volunteerPrivate/{volunteerId} {
+        allow read, write: if coordinatorOrAdmin(organizationId);
+        allow create: if signedIn() && request.auth.uid == request.resource.data.authUid && getAfter(/databases/$(database)/documents/organizations/$(organizationId)/members/$(request.auth.uid)).data.volunteerId == volunteerId;
+      }
+
+      match /volunteerDirectory/{volunteerId} {
+        allow read: if activeMember(organizationId);
+        allow create, update: if coordinatorOrAdmin(organizationId) && request.resource.data.volunteerId == volunteerId && request.resource.data.keys().hasOnly(['volunteerId', 'name', 'skills', 'availability', 'photoPath', 'status', 'updatedAt']);
+        allow delete: if admin(organizationId);
+      }
+
+      match /donors/{donorId} {
+        allow read: if coordinatorOrAdmin(organizationId);
+        allow create, update, delete: if admin(organizationId);
+      }
+
+      match /donations/{donationId} {
+        allow read: if coordinatorOrAdmin(organizationId);
+        allow create, update, delete: if admin(organizationId);
+      }
+
+      match /drives/{driveId} {
+        allow read: if coordinatorOrAdmin(organizationId);
+        allow create, update: if coordinatorOrAdmin(organizationId);
+        allow delete: if admin(organizationId);
+      }
+
+      match /participation/{participationId} {
+        allow read: if coordinatorOrAdmin(organizationId) || (activeMember(organizationId) && member(organizationId).data.volunteerId == resource.data.volunteerId);
+        allow create: if (coordinatorOrAdmin(organizationId) || (activeMember(organizationId) && member(organizationId).data.role == 'volunteer' && request.resource.data.volunteerId == member(organizationId).data.volunteerId && request.resource.data.status == 'registered')) && driveCounterAfter(organizationId, request.resource.data.driveId, 1);
+        allow update: if (coordinatorOrAdmin(organizationId) && (driveCounterAfter(organizationId, request.resource.data.driveId, request.resource.data.status == 'withdrawn' && resource.data.status != 'withdrawn' ? -1 : request.resource.data.status == 'registered' && resource.data.status == 'withdrawn' ? 1 : 0))) || (activeMember(organizationId) && member(organizationId).data.volunteerId == resource.data.volunteerId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'withdrawnAt', 'updatedAt']) && (request.resource.data.status == 'withdrawn' ? driveCounterAfter(organizationId, request.resource.data.driveId, -1) : request.resource.data.status == 'registered' && resource.data.status == 'withdrawn' ? driveCounterAfter(organizationId, request.resource.data.driveId, 1) : driveCounterAfter(organizationId, request.resource.data.driveId, 0)));
+        allow delete: if false;
+        match /withdrawals/{withdrawalId} {
+          allow create: if coordinatorOrAdmin(organizationId) || (activeMember(organizationId) && member(organizationId).data.volunteerId == get(/databases/$(database)/documents/organizations/$(organizationId)/participation/$(participationId)).data.volunteerId);
+          allow read: if coordinatorOrAdmin(organizationId) || (activeMember(organizationId) && member(organizationId).data.volunteerId == get(/databases/$(database)/documents/organizations/$(organizationId)/participation/$(participationId)).data.volunteerId);
+          allow update, delete: if false;
+        }
+      }
+
+      match /activities/{activityId} {
+        allow read: if coordinatorOrAdmin(organizationId);
+        allow create: if activeMember(organizationId) && request.resource.data.actorUid == request.auth.uid && request.resource.data.source == 'clientActivity' && request.resource.data.trusted == false;
+        allow update, delete: if false;
+      }
+
+      match /volunteerEmailIndex/{emailHash} {
+        allow read, write: if coordinatorOrAdmin(organizationId);
+      }
+      match /donorEmailIndex/{emailHash} {
+        allow read, write: if admin(organizationId);
+      }
+      match /reportSnapshots/{snapshotId} {
+        allow read: if coordinatorOrAdmin(organizationId);
+        allow write: if admin(organizationId);
+      }
+    }
+  }
+}

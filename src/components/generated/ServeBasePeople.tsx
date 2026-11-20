@@ -6,6 +6,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { onSnapshot } from "firebase/firestore";
 import { Icon } from "./ServeBaseIcons";
 import { ProfileAvatar, ProfilePhotoPicker } from "./ServeBaseProfilePhoto";
 import {
@@ -18,6 +19,10 @@ import {
   type Donor,
   type Donation,
 } from "./ServeBaseStore";
+import { firebaseConfigStatus, requireFirebase } from "../../lib/firebase";
+import { collectionRef } from "../../lib/firebasePaths";
+import { approveVolunteerByEmailOrId } from "../../lib/firebaseAuth";
+import { volunteerRepository, donorRepository, donationRepository } from "../../lib/firebaseRepositories";
 import "./ServeBasePeople.css";
 
 type Section = "volunteers" | "donors" | "donations";
@@ -345,6 +350,93 @@ export function PeoplePage({
     setDeleteError("");
   }, [deleteId]);
 
+  useEffect(() => {
+    if (!firebaseConfigStatus.configured) return;
+    try {
+      const { db: firestoreDb } = requireFirebase();
+      const unsub = onSnapshot(collectionRef(firestoreDb, section), (snapshot) => {
+        const remoteItems = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
+        if (remoteItems.length > 0) {
+          update((current) => {
+            const existingMap = new Map(current[section].map((item) => [item.id, item]));
+            remoteItems.forEach((ri: any) => {
+              if (section === "volunteers") {
+                existingMap.set(ri.id, {
+                  id: ri.id,
+                  name: ri.name || "Volunteer",
+                  email: ri.email || "",
+                  phone: ri.phone || "",
+                  skills: Array.isArray(ri.skills) ? ri.skills : [],
+                  availability: ri.availability || "Flexible",
+                  status: ri.status === "Active" ? "Active" : "Inactive",
+                  joinedOn: ri.joinedOn || TODAY(),
+                  notes: ri.notes || "",
+                  photo: ri.photo || undefined,
+                } as Volunteer);
+              } else if (section === "donors") {
+                existingMap.set(ri.id, {
+                  id: ri.id,
+                  name: ri.name || "Donor",
+                  type: ri.type || "Individual",
+                  email: ri.email || "",
+                  phone: ri.phone || "",
+                  address: ri.address || "",
+                  notes: ri.notes || "",
+                  joinedOn: ri.joinedOn || TODAY(),
+                } as Donor);
+              } else if (section === "donations") {
+                existingMap.set(ri.id, {
+                  id: ri.id,
+                  donorId: ri.donorId || "",
+                  amount: ri.amount || 0,
+                  date: ri.date || TODAY(),
+                  type: ri.type === "In-kind" || ri.type === "inKind" ? "In-kind" : "Monetary",
+                  category: ri.category || "General support",
+                  notes: ri.notes || "",
+                } as Donation);
+              }
+            });
+            return {
+              ...current,
+              [section]: Array.from(existingMap.values()),
+            };
+          });
+        }
+      });
+      return () => unsub();
+    } catch {
+      /* fallback if unconfigured */
+    }
+  }, [section, update]);
+
+  const approveVolunteerHandler = async (volunteer: Volunteer) => {
+    try {
+      update(
+        (current) => ({
+          ...current,
+          volunteers: current.volunteers.map((v) =>
+            v.id === volunteer.id ? { ...v, status: "Active" as const } : v,
+          ),
+        }),
+        {
+          title: "Approved volunteer access",
+          detail: volunteer.name,
+          kind: "volunteer",
+        },
+      );
+      if (firebaseConfigStatus.configured) {
+        await approveVolunteerByEmailOrId(volunteer.id, volunteer.email);
+      }
+      setNotice(`Approved ${volunteer.name}. They can now sign in to their fieldbook.`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Approval failed.";
+      setNotice(`Could not approve volunteer: ${msg}`);
+    }
+  };
+
   const records: RecordItem[] = db[section];
   const donorName = (id: string) =>
     db.donors.find((d) => d.id === id)?.name ?? "Unavailable donor";
@@ -622,6 +714,25 @@ export function PeoplePage({
         }),
         activity,
       );
+      if (firebaseConfigStatus.configured) {
+        void volunteerRepository.create(
+          id,
+          {
+            id,
+            name: f.name,
+            email: f.email.toLowerCase(),
+            phone: f.phone,
+            skills: [...uniqueSkills.values()],
+            availability: f.availability as Volunteer["availability"],
+            status: f.status as Volunteer["status"],
+            joinedOn: f.joinedOn,
+          },
+          f.notes
+        );
+        if (f.status === "Active") {
+          void approveVolunteerByEmailOrId(id, f.email.toLowerCase());
+        }
+      }
     } else if (section === "donors") {
       const item: Donor = {
         id,
@@ -642,6 +753,18 @@ export function PeoplePage({
         }),
         activity,
       );
+      if (firebaseConfigStatus.configured) {
+        void donorRepository.create(id, {
+          id,
+          name: f.name,
+          type: f.type as Donor["type"],
+          email: f.email.toLowerCase(),
+          phone: f.phone,
+          address: f.address,
+          notes: f.notes,
+          joinedOn: f.joinedOn,
+        });
+      }
     } else {
       const item: Donation = {
         id,
@@ -661,6 +784,17 @@ export function PeoplePage({
         }),
         activity,
       );
+      if (firebaseConfigStatus.configured) {
+        void donationRepository.create(id, {
+          id,
+          donorId: f.donorId,
+          amountPaise: Math.round(Number(f.amount || 0) * 100),
+          date: f.date,
+          type: f.type === "In-kind" ? "inKind" : "monetary",
+          category: f.category,
+          notes: f.notes,
+        });
+      }
     }
     if (!saved) {
       setErrors({
@@ -699,6 +833,11 @@ export function PeoplePage({
       );
       return;
     }
+    if (firebaseConfigStatus.configured) {
+      if (section === "donors") void donorRepository.remove(deleting.id);
+      if (section === "donations") void donationRepository.remove(deleting.id);
+      if (section === "volunteers") void volunteerRepository.update(deleting.id, { status: "Inactive" });
+    }
     setDeleteId(null);
     setDetailId(null);
     setNotice(`${label} was deleted.`);
@@ -723,6 +862,9 @@ export function PeoplePage({
         "This volunteer could not be marked inactive. Close this dialog and check the workspace notice.",
       );
       return;
+    }
+    if (firebaseConfigStatus.configured) {
+      void volunteerRepository.update(deleting.id, { status: "Inactive" });
     }
     setDeleteId(null);
     setNotice("Volunteer marked inactive. Participation history is preserved.");
@@ -1253,6 +1395,25 @@ export function PeoplePage({
                     )}
                     <td>
                       <div className="people-row-actions">
+                        {section === "volunteers" && (item as Volunteer).status !== "Active" && (
+                          <button
+                            type="button"
+                            style={{
+                              padding: "4px 9px",
+                              borderRadius: "6px",
+                              background: "#166534",
+                              color: "#f0fdf4",
+                              fontWeight: 600,
+                              fontSize: "12px",
+                              border: "none",
+                              cursor: "pointer",
+                            }}
+                            onClick={() => approveVolunteerHandler(item as Volunteer)}
+                            aria-label={`Approve ${recordLabel(item)}`}
+                          >
+                            Approve
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setDetailId(item.id)}
@@ -1932,6 +2093,19 @@ export function PeoplePage({
             >
               Close
             </button>
+            {section === "volunteers" && (detail as Volunteer).status !== "Active" && (
+              <button
+                type="button"
+                className="db-button primary"
+                style={{ background: "#166534", borderColor: "#166534", color: "#ffffff" }}
+                onClick={() => {
+                  void approveVolunteerHandler(detail as Volunteer);
+                  setDetailId(null);
+                }}
+              >
+                Approve & Activate
+              </button>
+            )}
             <button
               type="button"
               className="db-button primary"

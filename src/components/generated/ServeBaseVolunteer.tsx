@@ -10,6 +10,10 @@ import { ProfileAvatar, ProfilePhotoPicker } from "./ServeBaseProfilePhoto";
 import { VolunteerThemeToggle } from "./ServeBaseVolunteerTheme";
 import type { VolunteerTheme } from "./ServeBaseVolunteerTheme";
 import { navigateServeBase } from "./ServeBaseNavigation";
+import { firebaseConfigStatus } from "../../lib/firebase";
+import { getMember, signOutCurrentUser, subscribeToAuth } from "../../lib/firebaseAuth";
+import { volunteerRepository } from "../../lib/firebaseRepositories";
+import type { VolunteerProfile } from "../../lib/firebaseModels";
 import {
   VolunteerHome,
   VolunteerDrives,
@@ -17,15 +21,6 @@ import {
 } from "./ServeBaseVolunteerPages";
 import "./ServeBaseVolunteer.css";
 
-const sessionKey = "servebase-volunteer-session-v1";
-function readIdentity() {
-  try {
-    const id = sessionStorage.getItem(sessionKey);
-    return id && /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(id) ? id : null;
-  } catch {
-    return null;
-  }
-}
 const chapters: { id: string; label: string; short: string; icon: IconName }[] =
   [
     { id: "home", label: "My fieldbook", short: "Fieldbook", icon: "book" },
@@ -71,21 +66,37 @@ export function VolunteerExperience({
   toggleTheme: () => void;
 }) {
   const { db } = useWorkspace();
-  const [identity, setIdentity] = useState<string | null>(readIdentity);
+  const [identity, setIdentity] = useState<string | null>(null);
   const [sessionNotice, setSessionNotice] = useState("");
+  const [pendingAccess, setPendingAccess] = useState(false);
   const path = route.replace(/^#/, "").split("?")[0].replace(/\/$/, "");
   const login = path === "/volunteer/login";
   const registration = path === "/volunteer/register";
-  const volunteer = db.volunteers.find(
+  const [remoteVolunteer, setRemoteVolunteer] = useState<Volunteer | null>(null);
+  const localVolunteer = db.volunteers.find(
     (v) => v.id === identity && v.status === "Active",
   );
+  const volunteer = remoteVolunteer ?? localVolunteer;
   useEffect(() => {
-    if (identity && !volunteer) {
-      try {
-        sessionStorage.removeItem(sessionKey);
-      } catch {
-        /* The session also closes in memory. */
-      }
+    if (!firebaseConfigStatus.configured) return;
+    return subscribeToAuth(async (user) => {
+      if (!user) { setIdentity(null); return; }
+      const member = await getMember(user.uid);
+      setIdentity(member?.role === "volunteer" && member.status === "active" ? member.volunteerId ?? null : null);
+    });
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    setRemoteVolunteer(null);
+    if (!identity || !firebaseConfigStatus.configured) return () => { cancelled = true; };
+    void volunteerRepository.get(identity).then((profile) => {
+      if (cancelled || !profile) return;
+      setRemoteVolunteer(toLocalVolunteer(profile));
+    }).catch(() => { if (!cancelled) setRemoteVolunteer(null); });
+    return () => { cancelled = true; };
+  }, [identity]);
+  useEffect(() => {
+    if (identity && !volunteer && !firebaseConfigStatus.configured) {
       setIdentity(null);
       setSessionNotice(
         "That volunteer profile is no longer active. Choose an active profile to open a fieldbook.",
@@ -97,7 +108,7 @@ export function VolunteerExperience({
     if (login) document.title = "Volunteer sign in — ServeBase Fieldbook";
   }, [login]);
   function enter(id: string) {
-    if (!db.volunteers.some((v) => v.id === id && v.status === "Active")) {
+    if (!firebaseConfigStatus.configured && !db.volunteers.some((v) => v.id === id && v.status === "Active")) {
       setSessionNotice(
         "Choose a current, active volunteer profile to continue.",
       );
@@ -106,22 +117,17 @@ export function VolunteerExperience({
     openIdentity(id);
   }
   function openIdentity(id: string) {
-    try {
-      sessionStorage.setItem(sessionKey, id);
-    } catch {
-      /* Demo entry remains usable in this tab. */
-    }
     setIdentity(id);
+    setPendingAccess(false);
     setSessionNotice("");
     window.location.hash = "/volunteer/home";
   }
   function leave() {
-    try {
-      sessionStorage.removeItem(sessionKey);
-    } catch {
-      /* Also cleared from memory below. */
+    if (!firebaseConfigStatus.configured) {
+      navigateServeBase("/volunteer/login", () => setIdentity(null));
+      return;
     }
-    navigateServeBase("/volunteer/login", () => setIdentity(null));
+    void signOutCurrentUser().finally(() => navigateServeBase("/volunteer/login", () => setIdentity(null)));
   }
   if (login || registration || !volunteer)
     return (
@@ -131,12 +137,20 @@ export function VolunteerExperience({
             {sessionNotice}
           </div>
         )}
-        {registration ? <VolunteerSignupPage
-          onCreated={openIdentity}
+        {pendingAccess ? <VolunteerPendingScreen onBack={() => setPendingAccess(false)} /> : registration ? <VolunteerSignupPage
+          onSuccess={(message) => {
+            setPendingAccess(false);
+            setIdentity(null);
+            setSessionNotice(message);
+            window.location.hash = "/volunteer/login";
+          }}
           theme={theme}
           toggleTheme={toggleTheme}
         /> : <VolunteerAuthPage
           onLogin={enter}
+          onPending={() => {
+            void signOutCurrentUser().finally(() => { setIdentity(null); setPendingAccess(true); window.location.hash = "/volunteer/login"; });
+          }}
           theme={theme}
           toggleTheme={toggleTheme}
         />}
@@ -151,6 +165,33 @@ export function VolunteerExperience({
       toggleTheme={toggleTheme}
     />
   );
+}
+
+function VolunteerPendingScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <main className="sv-auth" aria-labelledby="sv-pending-title">
+      <section className="sv-auth-entry" style={{ maxWidth: 680, margin: "auto" }}>
+        <div className="sv-auth-entry-heading"><span>APPLICATION RECEIVED</span><span>02 / REVIEW</span></div>
+        <h1 id="sv-pending-title">Your application is<br /><em>awaiting approval.</em></h1>
+        <p className="sv-auth-intro">Your account is ready, but an administrator must approve your volunteer access before you can enter the fieldbook.</p>
+        <button className="sv-auth-submit" type="button" onClick={onBack}>Return to sign in <Icon name="arrow" size={17} /></button>
+      </section>
+    </main>
+  );
+}
+
+function toLocalVolunteer(profile: VolunteerProfile): Volunteer {
+  return {
+    id: profile.id,
+    name: profile.name,
+    email: profile.email,
+    phone: profile.phone ?? "",
+    skills: profile.skills,
+    availability: profile.availability,
+    status: profile.status === "Active" ? "Active" : "Inactive",
+    joinedOn: profile.joinedOn,
+    notes: "",
+  };
 }
 
 function VolunteerFieldbook({

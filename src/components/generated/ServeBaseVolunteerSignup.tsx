@@ -1,14 +1,15 @@
 import { useRef, useState, type FormEvent } from "react";
 import { Icon } from "./ServeBaseIcons";
 import { ProfilePhotoPicker } from "./ServeBaseProfilePhoto";
-import { newId, useWorkspace, type Volunteer } from "./ServeBaseStore";
+import { firebaseErrorDetails, registerVolunteer, signOutCurrentUser, VolunteerProfileSetupError } from "../../lib/firebaseAuth";
+import type { Availability } from "../../lib/firebaseModels";
 import { VolunteerThemeToggle, type VolunteerTheme } from "./ServeBaseVolunteerTheme";
 import "./ServeBaseVolunteerAuth.css";
 import "./ServeBaseVolunteerSignup.css";
 
 const termsVersion = "2026-10-26";
 const skillSuggestions = ["Teaching", "First aid", "Logistics", "Community outreach", "Photography", "Data entry"];
-const availabilityOptions: { value: Volunteer["availability"]; detail: string }[] = [
+const availabilityOptions: { value: Availability; detail: string }[] = [
   { value: "Weekdays", detail: "Monday to Friday" },
   { value: "Weekends", detail: "Saturday & Sunday" },
   { value: "Flexible", detail: "Decide with the team" },
@@ -19,26 +20,29 @@ type SignupForm = {
   email: string;
   phone: string;
   skills: string;
-  availability: Volunteer["availability"];
+  availability: Availability;
+  password: string;
+  confirmPassword: string;
 };
 
 export function VolunteerSignupPage({
-  onCreated,
+  onSuccess,
   theme,
   toggleTheme,
 }: {
-  onCreated: (volunteerId: string) => void;
+  onSuccess: (message: string) => void;
   theme: VolunteerTheme;
   toggleTheme: () => void;
 }) {
-  const { db, update } = useWorkspace();
-  const [form, setForm] = useState<SignupForm>({ name: "", email: "", phone: "", skills: "", availability: "Flexible" });
+  const [form, setForm] = useState<SignupForm>({ name: "", email: "", phone: "", skills: "", availability: "Flexible", password: "", confirmPassword: "" });
   const [photo, setPhoto] = useState("");
   const [photoBusy, setPhotoBusy] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const submitLock = useRef(false);
   const skills = form.skills.split(",").map((skill) => skill.trim()).filter(Boolean);
@@ -60,7 +64,7 @@ export function VolunteerSignupPage({
     requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitLock.current || photoBusy) return;
     const nextErrors: Record<string, string> = {};
@@ -71,8 +75,10 @@ export function VolunteerSignupPage({
       nextErrors.name = "Enter your name using 2–200 characters.";
     if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       nextErrors.email = "Enter a valid email address for your volunteer profile.";
-    else if (db.volunteers.some((volunteer) => volunteer.email.trim().toLowerCase() === email.toLowerCase()))
-      nextErrors.email = "A volunteer profile already uses this email. Sign in with that profile or use another address.";
+    if (form.password.length < 8 || form.password.length > 128)
+      nextErrors.password = "Use a password between 8 and 128 characters.";
+    if (form.password !== form.confirmPassword)
+      nextErrors.confirmPassword = "Passwords do not match.";
     if (phone && (!/^[+()\d\s.-]{7,60}$/.test(phone) || phone.replace(/\D/g, "").length < 7 || phone.replace(/\D/g, "").length > 15))
       nextErrors.phone = "Include 7–15 digits, with an optional country code.";
     if (skills.length > 30 || skills.some((skill) => skill.length > 100))
@@ -90,49 +96,30 @@ export function VolunteerSignupPage({
 
     submitLock.current = true;
     setSubmitting(true);
-    const volunteerId = newId("vol");
     const uniqueSkills = [...new Map(skills.map((skill) => [skill.toLowerCase(), skill])).values()];
-    const joinedOn = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-    let failure = "Your account could not be created. Please try again.";
-    const ok = update((current) => {
-      if (current.volunteers.some((volunteer) => volunteer.email.trim().toLowerCase() === email.toLowerCase())) {
-        failure = "A volunteer profile already uses this email. Return to sign-in or use another address.";
-        throw new Error(failure);
+    try {
+      await registerVolunteer({ name, email, password: form.password, phone, skills: uniqueSkills, availability: form.availability, termsVersion });
+      setForm({ name: "", email: "", phone: "", skills: "", availability: "Flexible", password: "", confirmPassword: "" });
+      setPhoto("");
+      setAccepted(false);
+      setErrors({});
+      setSubmitting(false);
+      submitLock.current = false;
+      onSuccess("Registration successful! You can now sign in. Your application is awaiting administrator approval.");
+    } catch (error) {
+      const details = firebaseErrorDetails(error instanceof VolunteerProfileSetupError ? error.originalError : error);
+      const code = details.code;
+      const failure = code.includes("email-already-in-use")
+        ? "An account already uses this email. Sign in or use another address."
+        : error instanceof VolunteerProfileSetupError
+          ? `${error.message} Your Firebase account was created, but registration is incomplete. Sign in with this email to retry profile setup.`
+          : error instanceof Error ? error.message : "Your account could not be created. Please try again.";
+      if (error instanceof VolunteerProfileSetupError) {
+        try { await signOutCurrentUser(); } catch { /* preserve the profile failure */ }
       }
-      if (current.volunteers.length >= 5000) {
-        failure = "This local workspace has reached its 5,000-profile limit. Ask the workspace administrator for help.";
-        throw new Error(failure);
-      }
-      const volunteer: Volunteer = {
-        id: volunteerId,
-        name,
-        email,
-        phone,
-        skills: uniqueSkills,
-        availability: form.availability,
-        status: "Active",
-        joinedOn,
-        notes: "",
-        ...(photo ? { photo } : {}),
-        termsAcceptedAt: new Date().toISOString(),
-        termsVersion,
-      };
-      return { ...current, volunteers: [...current.volunteers, volunteer] };
-    }, {
-      title: "Volunteer account created",
-      detail: `${name} joined the local volunteer fieldbook.`,
-      kind: "volunteer",
-    });
-    if (ok) {
-      onCreated(volunteerId);
-      return;
-    }
-    submitLock.current = false;
-    setSubmitting(false);
-    setNotice(failure);
-    if (failure.startsWith("A volunteer")) {
-      setErrors({ email: failure });
-      focusFirstError();
+      setSubmitting(false);
+      submitLock.current = false;
+      setNotice(failure);
     }
   }
 
@@ -196,6 +183,25 @@ export function VolunteerSignupPage({
             </label>
             <div className="sv-signup-skills" aria-label="Suggested skills">{skillSuggestions.map((skill) => <button type="button" key={skill} aria-pressed={skills.some((item) => item.toLowerCase() === skill.toLowerCase())} onClick={() => toggleSkill(skill)}>{skill}<Icon name={skills.some((item) => item.toLowerCase() === skill.toLowerCase()) ? "check" : "arrow"} size={12} /></button>)}</div>
             <fieldset className="sv-signup-availability"><legend>Usual availability <span aria-hidden="true">*</span></legend><div>{availabilityOptions.map((option) => <label key={option.value}><input type="radio" name="availability" value={option.value} checked={form.availability === option.value} onChange={() => setField("availability", option.value)} aria-invalid={Boolean(errors.availability)} aria-describedby={errors.availability ? "sv-signup-availability-error" : undefined} /><span><strong>{option.value}</strong><small>{option.detail}</small></span></label>)}</div>{errors.availability && <small id="sv-signup-availability-error" className="sv-signup-field-error">{errors.availability}</small>}<p>You can update this later. A specific drive still needs your registration.</p></fieldset>
+          </fieldset>
+
+          <fieldset className="sv-signup-section" disabled={submitting}>
+            <legend><span>03</span> Secure your account</legend>
+            <div className="sv-signup-fields">
+              <label className="sv-signup-field" htmlFor="sv-signup-password">Password <span aria-hidden="true">*</span>
+                <input id="sv-signup-password" name="password" type={passwordVisible ? "text" : "password"} autoComplete="new-password" minLength={8} maxLength={128} required value={form.password} onChange={(event) => setField("password", event.target.value)} aria-invalid={Boolean(errors.password)} />
+                {errors.password && <small className="sv-signup-field-error">{errors.password}</small>}
+              </label>
+              <label className="sv-signup-field" htmlFor="sv-signup-confirm-password">Confirm password <span aria-hidden="true">*</span>
+                <input id="sv-signup-confirm-password" name="confirmPassword" type={confirmPasswordVisible ? "text" : "password"} autoComplete="new-password" minLength={8} maxLength={128} required value={form.confirmPassword} onChange={(event) => setField("confirmPassword", event.target.value)} aria-invalid={Boolean(errors.confirmPassword)} />
+                {errors.confirmPassword && <small className="sv-signup-field-error">{errors.confirmPassword}</small>}
+              </label>
+            </div>
+            <div className="sv-signup-skills">
+              <button type="button" aria-pressed={passwordVisible} onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? "Hide password" : "Show password"}</button>
+              <button type="button" aria-pressed={confirmPasswordVisible} onClick={() => setConfirmPasswordVisible((value) => !value)}>{confirmPasswordVisible ? "Hide confirmation" : "Show confirmation"}</button>
+            </div>
+            <p>Passwords are handled by Firebase Authentication and are never stored in Firestore.</p>
           </fieldset>
 
           <div className="sv-signup-agreement">

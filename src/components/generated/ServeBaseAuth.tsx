@@ -3,24 +3,27 @@ import type { FormEvent } from "react";
 import { Icon } from "./ServeBaseIcons";
 import { ThemeToggle } from "./ServeBaseTheme";
 import type { Theme } from "./ServeBaseTheme";
+import { firebaseConfigStatus } from "../../lib/firebase";
+import { getMember, sendReset, signIn, signOutCurrentUser } from "../../lib/firebaseAuth";
 import "./ServeBaseAuth.css";
 
 type Props = {
   theme: Theme;
   toggleTheme: () => void;
   recovery: boolean;
-  onDemoLogin: () => void;
+  onAuthenticated: () => void;
 };
 export function AdminAuthPage({
   theme,
   toggleTheme,
   recovery,
-  onDemoLogin,
+  onAuthenticated,
 }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {},
   );
@@ -34,13 +37,9 @@ export function AdminAuthPage({
       : "Admin sign in — ServeBase";
     title.current?.focus({ preventScroll: true });
   }, [recovery]);
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice("");
-    if (!recovery) {
-      onDemoLogin();
-      return;
-    }
     const next: typeof errors = {};
     if (!email.trim()) next.email = "Enter your work email address.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
@@ -55,11 +54,63 @@ export function AdminAuthPage({
       passwordInput.current?.focus();
       return;
     }
-    setNotice(
-      recovery
-        ? "Password recovery is not connected yet. No reset email has been sent."
-        : "The sign-in service is not connected yet. Your credentials have not been sent or saved.",
-    );
+    setSubmitting(true);
+    try {
+      if (recovery) {
+        if (firebaseConfigStatus.configured) {
+          await sendReset(email.trim());
+        }
+        setNotice(
+          "If an account exists for that address, a password reset email has been requested."
+        );
+      } else {
+        if (firebaseConfigStatus.configured) {
+          const user = await signIn(email.trim(), password);
+          const member = await getMember(user.uid);
+          if (
+            !member ||
+            (member.role !== "admin" && member.role !== "coordinator")
+          ) {
+            await signOutCurrentUser();
+            throw new Error(
+              "This Firebase account does not have administrative access for this organization."
+            );
+          }
+          if (member.status !== "active") {
+            await signOutCurrentUser();
+            throw new Error(
+              "This administrative account is not active. Contact your organization owner."
+            );
+          }
+        }
+        onAuthenticated();
+      }
+    } catch (error) {
+      try {
+        if (firebaseConfigStatus.configured) await signOutCurrentUser();
+      } catch {
+        /* preserve original error message */
+      }
+      const code =
+        error instanceof Error && "code" in error
+          ? String((error as { code?: string }).code)
+          : "";
+      setNotice(
+        code.includes("invalid-credential") ||
+          code.includes("user-not-found") ||
+          code.includes("wrong-password")
+          ? "The email or password is incorrect."
+          : code.includes("invalid-email")
+            ? "Enter a valid email address."
+            : code.includes("too-many-requests")
+              ? "Too many failed attempts. Please try again later."
+              : error instanceof Error
+                ? error.message
+                : "The sign-in request could not be completed."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
   return (
     <div className="sb sb-auth">
@@ -290,11 +341,17 @@ export function AdminAuthPage({
               )}
               {!recovery && (
                 <p className="sb-auth-demo-hint">
-                  You can leave both fields empty and continue.
+                  Use the Firebase account provisioned for your organization.
                 </p>
               )}
-              <button className="sb-auth-submit" type="submit">
-                {recovery ? "Request reset link" : "Sign in to ServeBase"}
+              <button className="sb-auth-submit" type="submit" disabled={submitting}>
+                {submitting
+                  ? recovery
+                    ? "Sending link…"
+                    : "Signing in…"
+                  : recovery
+                    ? "Request reset link"
+                    : "Sign in to ServeBase"}
                 <Icon name="arrow" size={18} />
               </button>
               {notice && (

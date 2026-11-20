@@ -1,0 +1,9 @@
+{
+  "indexes": [
+    { "collectionGroup": "participation", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "volunteerId", "order": "ASCENDING" }, { "fieldPath": "updatedAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "participation", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "driveId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "ASCENDING" }] },
+    { "collectionGroup": "donations", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "donorId", "order": "ASCENDING" }, { "fieldPath": "date", "order": "DESCENDING" }] },
+    { "collectionGroup": "driveDirectory", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "publicationStatus", "order": "ASCENDING" }, { "fieldPath": "publicRegistrationOpen", "order": "ASCENDING" }, { "fieldPath": "date", "order": "ASCENDING" }] }
+  ],
+  "fieldOverrides": []
+}

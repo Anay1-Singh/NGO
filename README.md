@@ -18,13 +18,14 @@ cd NGO/servebase
 ```
 
 If the repository is checked out with `servebase` as its root, simply run the
-commands below from that directory. The application is a Vite React prototype;
-it does not need a database, API key, or environment file.
+commands below from that directory. The application is a Vite React application with a Firebase integration layer. A configured `.env.local` is required for shared authentication and Firestore operations; without it, the application remains available with an explicit Firebase setup warning.
 
 ```sh
 npm install
 npm run dev
 ```
+
+For Firebase-backed local development, copy `.env.example` to `.env.local`, populate the exact Firebase Web App values from the Firebase Console, and set `VITE_ORGANIZATION_ID=servebase-main`. See `FIREBASE_SETUP.md` and `FIREBASE_ADMIN_BOOTSTRAP.md` before provisioning the first administrator.
 
 ```sh
 npm run build

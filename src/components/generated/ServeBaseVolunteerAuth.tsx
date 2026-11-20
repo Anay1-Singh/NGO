@@ -4,14 +4,17 @@ import { useWorkspace } from "./ServeBaseStore";
 import { VolunteerThemeToggle } from "./ServeBaseVolunteerTheme";
 import { ProfileAvatar } from "./ServeBaseProfilePhoto";
 import type { VolunteerTheme } from "./ServeBaseVolunteerTheme";
+import { completeVolunteerProfile, getMember, readRegistrationDraft, signIn, signOutCurrentUser } from "../../lib/firebaseAuth";
 import "./ServeBaseVolunteerAuth.css";
 
 export function VolunteerAuthPage({
   onLogin,
+  onPending,
   theme,
   toggleTheme,
 }: {
   onLogin: (volunteerId: string) => void;
+  onPending: () => void;
   theme: VolunteerTheme;
   toggleTheme: () => void;
 }) {
@@ -21,8 +24,10 @@ export function VolunteerAuthPage({
     [db.volunteers],
   );
   const [selectedId, setSelectedId] = useState(profiles[0]?.id ?? "");
-  const [emailMode, setEmailMode] = useState(false);
+  const [emailMode, setEmailMode] = useState(true);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState("");
   const selectedProfile =
     profiles.find((profile) => profile.id === selectedId) ?? profiles[0];
@@ -34,20 +39,34 @@ export function VolunteerAuthPage({
       ? emailMatches[0]
       : undefined
     : selectedProfile;
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!profile) {
-      setError(
-        emailMode
-          ? emailMatches.length > 1
-            ? "More than one active profile uses this email. Choose your demo profile from the list instead."
-            : "That email does not match an active profile in this local workspace. Choose a demo profile instead."
-          : "There are no active volunteer profiles in this workspace. An administrator can add or activate one.",
-      );
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Enter the email used for your Firebase volunteer account.");
       return;
     }
+    if (!password) { setError("Enter your password."); return; }
     setError("");
-    onLogin(profile.id);
+    try {
+      const user = await signIn(email, password);
+      let member = await getMember(user.uid);
+      if (!member || member.status === "pending") {
+        const draft = readRegistrationDraft(user.email ?? email);
+        if (draft) {
+          await completeVolunteerProfile(user.uid, draft);
+          member = await getMember(user.uid);
+        }
+      }
+      if (!member || member.role !== "volunteer") throw new Error("This account is not linked to a volunteer profile in this organization.");
+      if (member.status === "pending") { onPending(); return; }
+      if (member.status === "suspended") throw new Error("This volunteer account is suspended. Contact an administrator.");
+      if (!member.volunteerId) throw new Error("Your account is missing its volunteer profile link. Contact an administrator.");
+      onLogin(member.volunteerId);
+    } catch (error) {
+      try { await signOutCurrentUser(); } catch { /* preserve the original auth message */ }
+      const code = error instanceof Error && "code" in error ? String((error as { code?: string }).code) : "";
+      setError(code.includes("invalid-credential") ? "The email or password is incorrect." : error instanceof Error ? error.message : "Volunteer sign-in could not be completed.");
+    }
   }
 
   function changeEntryMethod() {
@@ -216,6 +235,12 @@ export function VolunteerAuthPage({
               </div>
             )}
 
+            {emailMode && <div className="sv-auth-email-wrap">
+              <Icon name="lock" size={19} />
+              <input id="sv-auth-password" type={passwordVisible ? "text" : "password"} autoComplete="current-password" value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} placeholder="Password" aria-invalid={Boolean(error)} />
+              <button type="button" className="sv-auth-method" onClick={() => setPasswordVisible((value) => !value)}>{passwordVisible ? "Hide" : "Show"}</button>
+            </div>}
+
             {profile ? (
               <div className="sv-auth-profile-card">
                 <ProfileAvatar
@@ -254,7 +279,7 @@ export function VolunteerAuthPage({
             <button
               type="submit"
               className="sv-auth-open"
-              disabled={!profiles.length}
+              disabled={!emailMode && !profiles.length}
             >
               <span>Open my fieldbook</span>
               <span className="sv-auth-open-arrow">
@@ -262,9 +287,8 @@ export function VolunteerAuthPage({
               </span>
             </button>
             <p id="sv-auth-demo-note" className="sv-auth-demo-note">
-              <span>LOCAL DEMO</span>This preview opens the selected profile
-              stored in this browser. No password or identity verification is
-              used.
+              <span>FIREBASE AUTH</span>Sign in with the email and password
+              for your approved volunteer account.
             </p>
             <div className="sv-auth-create">
               <span>New to the fieldbook?</span>
